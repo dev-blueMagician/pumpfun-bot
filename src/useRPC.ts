@@ -13,6 +13,7 @@ import { bloxRouteSniper } from "./bloxroute/bloxRouteSwap";
 import { jitoSniper } from "./jito/jitoSwap";
 import { pumpfunSniper } from "./pumpfun/pumpfunSwap";
 import base58 from "bs58";
+import { Metaplex } from "@metaplex-foundation/js";
 
 export async function useRPC() {
   const connection = new Connection(RPC_URL, { wsEndpoint: WEBSOCKET_URL });
@@ -52,6 +53,7 @@ export async function useRPC() {
             const solSpent = Number(tx?.meta?.preBalances[0] - tx?.meta?.postBalances[0]);
             //@ts-ignore
             const splBought = Number(tx?.meta?.postTokenBalances[1]?.uiTokenAmount?.amount);
+            
             const swapParam: SwapParams = {
                 mint,
                 user,
@@ -60,8 +62,10 @@ export async function useRPC() {
                 solSpent,
                 splBought,
             };
-
-
+            console.table(swapParam);
+            const metplex = new Metaplex(connection);
+            const metadata = await metplex.nfts().findByMint({mintAddress: mint});
+            console.log(metadata);
 
               if (
                 solSpent <= BotConfig.SnipeAt.Max &&
@@ -69,11 +73,11 @@ export async function useRPC() {
               ) {
                 swapAvailable = false;
                 if (TxnConfig.TxnType === TxnMode.BloxRoute) {
-                  await bloxRouteSniper(swapParam); // Trigger swap using bloxroute
+                  // await bloxRouteSniper(swapParam); // Trigger swap using bloxroute
                 } else if (TxnConfig.TxnType === TxnMode.Jito) {
-                  await jitoSniper(swapParam); // Trigger swap using jito
+                  // await jitoSniper(swapParam); // Trigger swap using jito
                 } else {
-                  await pumpfunSniper(swapParam); // Trigger swap using pumpfun
+                  // await pumpfunSniper(swapParam); // Trigger swap using pumpfun
                 }
                 swapAvailable = true;
               }

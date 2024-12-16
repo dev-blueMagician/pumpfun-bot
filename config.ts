@@ -44,7 +44,7 @@ export const BotConfig = {
     Min: 0.5 * LAMPORTS_PER_SOL,
     Max: 3.5 * LAMPORTS_PER_SOL,
   },
-  SnipeAmount: 0.00001 * LAMPORTS_PER_SOL, // sniping amount
+  SnipeAmount: 0.002 * LAMPORTS_PER_SOL, // sniping amount
   KeepBuy: true, // keep buy
   CheckDevSell: false, // wait dev's sell
   CheckBuy: false, // wait buy amount hits MinBuyAmount
