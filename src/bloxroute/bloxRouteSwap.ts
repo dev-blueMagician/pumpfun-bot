@@ -16,6 +16,7 @@ import {
 import {
   BLOX_AUTH_HEADER,
   BotConfig,
+  connection,
   TxnConfig,
   user_keypair,
 } from "../../config";
@@ -38,6 +39,7 @@ import {
 import { HttpsAgent } from "agentkeepalive";
 import { moniterTrading } from "../utils/geyser"; // RESTORED IMPORTS
 import base58 from "bs58";
+import { checkTPSL } from "../utils/checkTPSL";
 
 
 const PRIVATE_KEY = base58.encode(user_keypair.secretKey);
@@ -63,12 +65,12 @@ const send2BloxRoute = async (
   instructions: TransactionInstruction[],
   retry: boolean = false,
   retryAttempts: number = 0
-): Promise<boolean> => {
+): Promise<{result: boolean, signature: string | null}> => {
   // Get the prefetched blockhash
   const blockhash = getLastValidBlockhash(); 
   if (!blockhash) {
     console.error("Failed to retrieve blockhash from cache");
-    return false;
+    return {result: false, signature: null};
   }
 
   // Prepare the instructions for BloxRoute
@@ -104,7 +106,7 @@ const send2BloxRoute = async (
     console.log(`* Bloxroute txn: https://solscan.io/tx/${sig}`);
 
     // Wait for the transaction result
-    return await getTxnResult(sig);
+    return {result: await getTxnResult(sig), signature: sig};
   } catch (e) {
     console.error("Error while sending bloxroute txn:", e);
 
@@ -114,7 +116,7 @@ const send2BloxRoute = async (
       return await send2BloxRoute(instructions, true, retryAttempts + 1);
     }
 
-    return false;
+    return {result: false, signature: null};
   }
 };
 
@@ -158,14 +160,23 @@ export const bloxRouteSniper = async (swapData: SwapParams) => {
   // Attempt to send the buy transaction
   const isBought = await send2BloxRoute(buyInstructions, true); // Retry enabled
 
-  if (isBought) {
+  if (isBought.result) {
     const endTime = Date.now();
     const timeTaken = endTime - startTime;
+    if(!isBought.signature) return;
+    const buyTx = await connection.getParsedTransaction(isBought.signature, {
+      maxSupportedTransactionVersion: 0,
+    });
+    console.log(`Buy txn: https://solscan.io/tx/${isBought.signature}`);
+    console.log(buyTx?.meta?.preBalances, buyTx?.meta?.postBalances);
+    // const usedSol = Number(buyTx?.meta?.preBalances[0]) - Number(buyTx?.meta?.postBalances[0]);
     console.log(
       `🎉 Successfully bought ${splOut / TOKEN_DECIMALS} tokens for ${
         solIn / LAMPORTS_PER_SOL
       } SOL. Time taken: ${timeTaken} ms`
     );
+    console.log(`Checking TPSL for ${ca}...`);
+    await checkTPSL(buyParam.bondingCurve.toBase58(), solIn/splOut);
 
     // sell function
     const sellBoughtTokens = async () => {

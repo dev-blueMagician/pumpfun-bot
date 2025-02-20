@@ -13,6 +13,7 @@ export const RENT = new PublicKey(
 export const PUMP_FUN_PROGRAM = new PublicKey(
   "6EF8rrecthR5Dkzon8Nwu78hRvfCKubJ14M5uBEwF6P"
 );
+
 export const EVENT_AUTHORITY = new PublicKey(
   "Ce6TQqeHC9p8KetsN6JsjHK7UTZk7nasjjnr7XxXp9F1"
 );

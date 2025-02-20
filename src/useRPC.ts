@@ -13,7 +13,6 @@ import { bloxRouteSniper } from "./bloxroute/bloxRouteSwap";
 import { jitoSniper } from "./jito/jitoSwap";
 import { pumpfunSniper } from "./pumpfun/pumpfunSwap";
 import base58 from "bs58";
-import { Metaplex } from "@metaplex-foundation/js";
 
 export async function useRPC() {
   const connection = new Connection(RPC_URL, { wsEndpoint: WEBSOCKET_URL });
@@ -30,7 +29,6 @@ export async function useRPC() {
           )
         ) {
           console.log(`🎉 Found new mint: https://solscan.io/tx/${signature}`);
-          const instructionName = "MAINNET_PROGRAM_ID.AmmV4.toString()";
           const tx = await connection.getParsedTransaction(signature, {
             maxSupportedTransactionVersion: 0,
             commitment: "confirmed",
@@ -62,10 +60,6 @@ export async function useRPC() {
                 solSpent,
                 splBought,
             };
-            console.table(swapParam);
-            const metplex = new Metaplex(connection);
-            const metadata = await metplex.nfts().findByMint({mintAddress: mint});
-            console.log(metadata);
 
               if (
                 solSpent <= BotConfig.SnipeAt.Max &&
@@ -73,11 +67,11 @@ export async function useRPC() {
               ) {
                 swapAvailable = false;
                 if (TxnConfig.TxnType === TxnMode.BloxRoute) {
-                  // await bloxRouteSniper(swapParam); // Trigger swap using bloxroute
+                  await bloxRouteSniper(swapParam); // Trigger swap using bloxroute
                 } else if (TxnConfig.TxnType === TxnMode.Jito) {
-                  // await jitoSniper(swapParam); // Trigger swap using jito
+                  await jitoSniper(swapParam); // Trigger swap using jito
                 } else {
-                  // await pumpfunSniper(swapParam); // Trigger swap using pumpfun
+                  await pumpfunSniper(swapParam); // Trigger swap using pumpfun
                 }
                 swapAvailable = true;
               }
@@ -91,13 +85,4 @@ export async function useRPC() {
   } catch (e) {
     console.log("Error in log: ", e);
   }
-
-  // const swapParam: SwapParams = {
-  //     mint,
-  //     user,
-  //     bondingCurve,
-  //     associatedBondingCurve,
-  //     solSpent,
-  //     splBought,
-  // };
 }

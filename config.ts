@@ -28,7 +28,7 @@ export enum TxnMode {
 }
 
 export const TxnConfig = {
-  TxnType: TxnMode.Jito, // txn type
+  TxnType: TxnMode.BloxRoute, // txn type
   Units: 430000, 
   Microlamports: 300000,
   Tip: { // buy/sell tip amount
@@ -39,17 +39,17 @@ export const TxnConfig = {
 }
 
 export const BotConfig = {
-  SignalType: SignalMode.RPC, // signal type
+  SignalType: SignalMode.GRPC, // signal type
   SnipeAt: { // sniping condition
-    Min: 0.5 * LAMPORTS_PER_SOL,
-    Max: 3.5 * LAMPORTS_PER_SOL,
+    Min: 1 * LAMPORTS_PER_SOL,
+    Max: 10 * LAMPORTS_PER_SOL,
   },
-  SnipeAmount: 0.002 * LAMPORTS_PER_SOL, // sniping amount
-  KeepBuy: true, // keep buy
+  SnipeAmount: 0.001 * LAMPORTS_PER_SOL, // sniping amount
+  KeepBuy: false, // keep buy
   CheckDevSell: false, // wait dev's sell
   CheckBuy: false, // wait buy amount hits MinBuyAmount
-  CheckBuyAmount: 2.5 * LAMPORTS_PER_SOL, // sell if buy amount >= this
-  MaxWaitTime:  5 * 60 * 1000, // 5 min
+  CheckBuyAmount: 0.01 * LAMPORTS_PER_SOL, // sell if buy amount >= this
+  MaxWaitTime:  1 * 60 * 1000, // 5 min
   SellSteps: [ // sell steps
     { delay: 10 * 1000, amount: 1.0 },
     //{ delay: 2 * 1000, amount: 0.5 },
