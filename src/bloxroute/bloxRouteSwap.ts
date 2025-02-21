@@ -17,6 +17,7 @@ import {
   BLOX_AUTH_HEADER,
   BotConfig,
   connection,
+  stakedConnection,
   TxnConfig,
   user_keypair,
 } from "../../config";
@@ -65,7 +66,7 @@ const send2BloxRoute = async (
   instructions: TransactionInstruction[],
   retry: boolean = false,
   retryAttempts: number = 0
-): Promise<{result: boolean, signature: string | null}> => {
+): Promise<{result: boolean, signature: string | null} | undefined> => {
   // Get the prefetched blockhash
   const blockhash = getLastValidBlockhash(); 
   if (!blockhash) {
@@ -106,7 +107,14 @@ const send2BloxRoute = async (
     console.log(`* Bloxroute txn: https://solscan.io/tx/${sig}`);
 
     // Wait for the transaction result
-    return {result: await getTxnResult(sig), signature: sig};
+    const result = await getTxnResult(sig);
+    if (result) return {result: true, signature: sig};
+    else {
+      if (retry && retryAttempts < 3) {
+        console.log("Retrying transaction...");
+        return await send2BloxRoute(instructions, true, retryAttempts + 1);
+      } 
+    }
   } catch (e) {
     console.error("Error while sending bloxroute txn:", e);
 
@@ -160,31 +168,31 @@ export const bloxRouteSniper = async (swapData: SwapParams) => {
   // Attempt to send the buy transaction
   const isBought = await send2BloxRoute(buyInstructions, true); // Retry enabled
 
-  if (isBought.result) {
+  if (isBought && isBought.result) {
     const endTime = Date.now();
     const timeTaken = endTime - startTime;
     if(!isBought.signature) return;
-    const buyTx = await connection.getParsedTransaction(isBought.signature, {
+    let buyTx = await stakedConnection.getParsedTransaction(isBought.signature, {
       maxSupportedTransactionVersion: 0,
+      commitment: "confirmed",
     });
+    if (!buyTx) {
+      buyTx = await stakedConnection.getParsedTransaction(isBought.signature, {
+        maxSupportedTransactionVersion: 0,
+        commitment: "confirmed",
+      });
+    }
     console.log(`Buy txn: https://solscan.io/tx/${isBought.signature}`);
     console.log(buyTx?.meta?.preBalances, buyTx?.meta?.postBalances);
-    // const usedSol = Number(buyTx?.meta?.preBalances[0]) - Number(buyTx?.meta?.postBalances[0]);
+    const usedSol = Number(buyTx?.meta?.postBalances[3]) - Number(buyTx?.meta?.preBalances[3]);
     console.log(
       `🎉 Successfully bought ${splOut / TOKEN_DECIMALS} tokens for ${
-        solIn / LAMPORTS_PER_SOL
-      } SOL. Time taken: ${timeTaken} ms`
+        usedSol / LAMPORTS_PER_SOL
+      } SOL. Slippage: ${(usedSol / solIn) * 100 - 100} Time taken: ${timeTaken} ms`
     );
     console.log(`Checking TPSL for ${ca}...`);
-    await checkTPSL(buyParam.bondingCurve.toBase58(), solIn/splOut);
-
-    // sell function
-    const sellBoughtTokens = async () => {
-      let sellAll = false;
-      if (BotConfig.CheckBuy || BotConfig.CheckDevSell)
-        sellAll = await moniterTrading(swapData, BotConfig.CheckDevSell, BotConfig.CheckBuy, BotConfig.CheckBuyAmount, BotConfig.MaxWaitTime);
-      if(sellAll){
-        const splIn = splOut;
+    checkTPSL(buyParam.bondingCurve.toBase58(), (usedSol / splOut) * (TOKEN_DECIMALS / LAMPORTS_PER_SOL)).then(async(result) => {
+      const splIn = splOut;
         const sellParam: SellInsParam = {
           mint: swapData.mint,
           owner: user_keypair.publicKey,
@@ -201,42 +209,68 @@ export const bloxRouteSniper = async (swapData: SwapParams) => {
         console.log(
           `${success ? "✅ Sold" : "❌ Failed selling"} 100%, ${ca}`
         );
-      }else{
-        let splBal = splOut;
-        for (let i = 0; i < BotConfig.SellSteps.length; i++) {
-          const condition = BotConfig.SellSteps[i];
-          const closeAta = i === BotConfig.SellSteps.length - 1;
-          let splIn = Math.floor(condition.amount * splOut);
-          if (closeAta) splIn = splBal;
-          splBal -= splIn;
-          const sellParam: SellInsParam = {
-            mint: swapData.mint,
-            owner: user_keypair.publicKey,
-            bondingCurve: swapData.bondingCurve,
-            associatedBondingCurve: swapData.associatedBondingCurve,
-            splIn,
-          };
-          const sellInstructions: TransactionInstruction[] = getSellInstruction(
-            sellParam,
-            closeAta
-          );
-          sellInstructions.push(getBloxRouteTipInstruction(user_keypair.publicKey, TxnConfig.Tip.Sell)); // Add the buy tip instruction
-          await sleepTime(condition.delay);
-          const success = await send2BloxRoute(sellInstructions, true);
-          console.log(
-            `${success ? "✅ Sold" : "❌ Failed selling"} ${
-              condition.amount * 100
-            } %, ${ca}`
-          );
-        }
-      }
-    }
-    if (BotConfig.KeepBuy) {
-      console.log(` Keep buy`);
-      sellBoughtTokens(); // if keep buy, don't wait to sell.
-    } else {
-      await sellBoughtTokens(); // if not keep buy, wait to sell.
-    }
+    });
+
+    // // sell function
+    // const sellBoughtTokens = async () => {
+    //   let sellAll = false;
+    //   if (BotConfig.CheckBuy || BotConfig.CheckDevSell)
+    //     sellAll = await moniterTrading(swapData, BotConfig.CheckDevSell, BotConfig.CheckBuy, BotConfig.CheckBuyAmount, BotConfig.MaxWaitTime);
+    //   if(sellAll){
+    //     const splIn = splOut;
+    //     const sellParam: SellInsParam = {
+    //       mint: swapData.mint,
+    //       owner: user_keypair.publicKey,
+    //       bondingCurve: swapData.bondingCurve,
+    //       associatedBondingCurve: swapData.associatedBondingCurve,
+    //       splIn,
+    //     };
+    //     const sellInstructions: TransactionInstruction[] = getSellInstruction(
+    //       sellParam,
+    //       true
+    //     );
+    //     sellInstructions.push(getBloxRouteTipInstruction(user_keypair.publicKey, TxnConfig.Tip.Sell)); // Add the buy tip instruction
+    //     const success = await send2BloxRoute(sellInstructions, true);
+    //     console.log(
+    //       `${success ? "✅ Sold" : "❌ Failed selling"} 100%, ${ca}`
+    //     );
+    //   }else{
+    //     let splBal = splOut;
+    //     for (let i = 0; i < BotConfig.SellSteps.length; i++) {
+    //       const condition = BotConfig.SellSteps[i];
+    //       const closeAta = i === BotConfig.SellSteps.length - 1;
+    //       let splIn = Math.floor(condition.amount * splOut);
+    //       if (closeAta) splIn = splBal;
+    //       splBal -= splIn;
+    //       const sellParam: SellInsParam = {
+    //         mint: swapData.mint,
+    //         owner: user_keypair.publicKey,
+    //         bondingCurve: swapData.bondingCurve,
+    //         associatedBondingCurve: swapData.associatedBondingCurve,
+    //         splIn,
+    //       };
+    //       const sellInstructions: TransactionInstruction[] = getSellInstruction(
+    //         sellParam,
+    //         closeAta
+    //       );
+    //       sellInstructions.push(getBloxRouteTipInstruction(user_keypair.publicKey, TxnConfig.Tip.Sell)); // Add the buy tip instruction
+    //       await sleepTime(condition.delay);
+    //       const success = await send2BloxRoute(sellInstructions, true);
+    //       console.log(
+    //         `${success ? "✅ Sold" : "❌ Failed selling"} ${
+    //           condition.amount * 100
+    //         } %, ${ca}`
+    //       );
+    //     }
+    //   }
+    // }
+    
+    // if (BotConfig.KeepBuy) {
+    //   console.log(` Keep buy`);
+    //   sellBoughtTokens(); // if keep buy, don't wait to sell.
+    // } else {
+    //   await sellBoughtTokens(); // if not keep buy, wait to sell.
+    // }
   } else {
     console.error(`⚠️ Failed to buy token ${ca}. Skipping this token.`);
   }

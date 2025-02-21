@@ -41,8 +41,8 @@ export const TxnConfig = {
 export const BotConfig = {
   SignalType: SignalMode.GRPC, // signal type
   SnipeAt: { // sniping condition
-    Min: 1 * LAMPORTS_PER_SOL,
-    Max: 10 * LAMPORTS_PER_SOL,
+    Min: 1.2 * LAMPORTS_PER_SOL,
+    Max: 8.3 * LAMPORTS_PER_SOL,
   },
   SnipeAmount: 0.001 * LAMPORTS_PER_SOL, // sniping amount
   KeepBuy: false, // keep buy

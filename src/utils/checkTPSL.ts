@@ -5,17 +5,23 @@ export const checkTPSL = (
   buyPrice: number
 ): Promise<boolean> => {
   return new Promise((resolve) => {
-    setInterval(() => {
-      console.log("Checking TPSL");
-      console.log(`Curve address: ${curveAddress}`);
-      console.log(`Buy price: ${buyPrice}`);
+    const priceTracker = setInterval(() => {
       getPrice(curveAddress).then((price) => {
-        console.log(`Current price: ${price}`);
-        if (price < buyPrice) {
-          console.log("TPSL reached");
+        console.log(
+          `Curve address: ${curveAddress} : ${buyPrice} => ${price} <==> ${
+            (price / buyPrice) * 100
+          }%`
+        );
+        if (price > buyPrice * 1.15) {
+          console.log("Take Profit");
+          clearInterval(priceTracker);
+          resolve(true);
+        } else if (price < buyPrice * 0.95) {
+          console.log("Stop Loss");
+          clearInterval(priceTracker);
+          resolve(true);
         }
       });
-      resolve(true);
     }, 400);
   });
 };
