@@ -15,6 +15,8 @@ export const connection = new Connection(RPC_URL, "processed");
 export const stakedConnection = new Connection(STAKED_RPC, "processed");
 export const user_keypair = Keypair.fromSecretKey(base58.decode(PRIVATE_KEY));
 
+console.log(user_keypair.publicKey.toBase58()); 
+
 export enum SignalMode {
   Geyser,
   GRPC,
@@ -28,18 +30,18 @@ export enum TxnMode {
 }
 
 export const TxnConfig = {
-  TxnType: TxnMode.BloxRoute, // txn type
+  TxnType: TxnMode.Jito, // txn type
   Units: 430000, 
   Microlamports: 300000,
   Tip: { // buy/sell tip amount
-    Buy: 0.001 * LAMPORTS_PER_SOL,
-    Sell: 0.001 * LAMPORTS_PER_SOL,
+    Buy: 0.00003 * LAMPORTS_PER_SOL,
+    Sell: 0.00001 * LAMPORTS_PER_SOL,
   },
-  Slippage: 100, // slippage 100%
+  Slippage: 200, // slippage 100%
 }
 
 export const BotConfig = {
-  SignalType: SignalMode.GRPC, // signal type
+  SignalType: SignalMode.Geyser, // signal type
   SnipeAt: { // sniping condition
     Min: 1.2 * LAMPORTS_PER_SOL,
     Max: 8.3 * LAMPORTS_PER_SOL,
@@ -48,7 +50,7 @@ export const BotConfig = {
   KeepBuy: false, // keep buy
   CheckDevSell: false, // wait dev's sell
   CheckBuy: false, // wait buy amount hits MinBuyAmount
-  CheckBuyAmount: 0.01 * LAMPORTS_PER_SOL, // sell if buy amount >= this
+  CheckBuyAmount: 0.1 * LAMPORTS_PER_SOL, // sell if buy amount >= this
   MaxWaitTime:  1 * 60 * 1000, // 5 min
   SellSteps: [ // sell steps
     { delay: 10 * 1000, amount: 1.0 },

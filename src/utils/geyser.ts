@@ -4,7 +4,7 @@ import { GEYSER_URL } from "../../config";
 import { LAMPORTS_PER_SOL } from "@solana/web3.js";
 import WebSocket from "ws";
 
-export const PING_INTERVAL_MS = 30_000; // 30s
+export const PING_INTERVAL_MS = 5_000; // 5s
 
 export function sendWsRequest(ws: WebSocket, accounts: string[]) {
   const request = {
@@ -33,7 +33,7 @@ export function startWsPing(ws: WebSocket) {
   setInterval(() => {
     if (ws.readyState === WebSocket.OPEN) {
       ws.ping();
-      console.log("Ping sent");
+      // console.log("Ping sent");
     }
   }, PING_INTERVAL_MS); // Ping every 30 seconds
 }

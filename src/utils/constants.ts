@@ -6,6 +6,9 @@ export const GLOBAL = new PublicKey(
 export const PUMP_FEE_RECIPIENT = new PublicKey(
   "CebN5WGQ4jvEPvsVU4EoHEpgzq1VV7AbicfhtW4xC9iM"
 );
+// export const PUMP_FEE_RECIPIENT = new PublicKey(
+//   "62qc2CNXwrYqQScmEdiZFFAnJR262PxWEuNQtxfafNgV"
+// );
 
 export const RENT = new PublicKey(
   "SysvarRent111111111111111111111111111111111"

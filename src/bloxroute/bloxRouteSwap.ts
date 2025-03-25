@@ -191,7 +191,7 @@ export const bloxRouteSniper = async (swapData: SwapParams) => {
       } SOL. Slippage: ${(usedSol / solIn) * 100 - 100} Time taken: ${timeTaken} ms`
     );
     console.log(`Checking TPSL for ${ca}...`);
-    checkTPSL(buyParam.bondingCurve.toBase58(), (usedSol / splOut) * (TOKEN_DECIMALS / LAMPORTS_PER_SOL)).then(async(result) => {
+    checkTPSL(buyParam.bondingCurve.toBase58(), (usedSol / splOut) * (TOKEN_DECIMALS / LAMPORTS_PER_SOL), endTime).then(async(result) => {
       const splIn = splOut;
         const sellParam: SellInsParam = {
           mint: swapData.mint,
